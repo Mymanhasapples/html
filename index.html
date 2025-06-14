@@ -114,7 +114,6 @@
       display: none;
     }
 
-    /* iOS-style alert */
     #ios-alert {
       position: fixed;
       top: 50%;
@@ -156,17 +155,14 @@
 </head>
 <body>
 
-  <!-- Analog Clock -->
   <div id="clock">
     <div id="hour" class="hand"></div>
     <div id="minute" class="hand"></div>
     <div id="second" class="hand"></div>
   </div>
 
-  <!-- Countdown Timer -->
   <div id="timer">1:50:00</div>
 
-  <!-- Plane Window -->
   <div class="plane-window">
     <div class="sky"></div>
     <div id="window-shade">
@@ -174,10 +170,8 @@
     </div>
   </div>
 
-  <!-- Destination Reached Message -->
   <div id="destination">Destination Reached</div>
 
-  <!-- iOS-style Alert -->
   <div id="ios-alert">
     <div class="title">Alert</div>
     <div class="message">100 is your code enter it in shop.</div>
@@ -186,14 +180,12 @@
     </div>
   </div>
 
-  <!-- Airplane White Noise -->
   <audio autoplay loop id="planeSound">
     <source src="https://cdn.pixabay.com/download/audio/2021/11/25/audio_0e15b18cd7.mp3?filename=airplane-interior-cabin-ambient-sound-111141.mp3" type="audio/mp3">
     Your browser does not support the audio element.
   </audio>
 
   <script>
-    // Shade drag logic
     const shade = document.getElementById("window-shade");
     const windowHeight = shade.parentElement.clientHeight;
     let isDragging = false;
@@ -201,6 +193,7 @@
 
     shade.style.height = windowHeight * 0.2 + "px";
 
+    // Mouse support
     shade.addEventListener("mousedown", (e) => {
       isDragging = true;
       shade.classList.add("dragging");
@@ -216,6 +209,27 @@
     });
 
     window.addEventListener("mouseup", () => {
+      isDragging = false;
+      shade.classList.remove("dragging");
+    });
+
+    // Touch support
+    shade.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) return;
+      isDragging = true;
+      shade.classList.add("dragging");
+      startY = e.touches[0].clientY;
+      startHeight = parseFloat(getComputedStyle(shade).height);
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      let dy = e.touches[0].clientY - startY;
+      let newHeight = Math.min(Math.max(startHeight + dy, windowHeight * 0.2), windowHeight);
+      shade.style.height = newHeight + "px";
+    });
+
+    window.addEventListener("touchend", () => {
       isDragging = false;
       shade.classList.remove("dragging");
     });
@@ -236,7 +250,7 @@
     function updateTimer() {
       if (totalSeconds <= 0) {
         destinationEl.style.display = "flex";
-        showIOSAlert(); // show code alert
+        showIOSAlert();
         return;
       }
 
@@ -250,7 +264,7 @@
 
     setInterval(updateTimer, 1000);
 
-    // Analog clock logic
+    // Clock update
     function updateClock() {
       const now = new Date();
       const hour = now.getHours();
@@ -269,8 +283,8 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Set initial volume
     document.getElementById("planeSound").volume = 0.3;
   </script>
 </body>
 </html>
+
