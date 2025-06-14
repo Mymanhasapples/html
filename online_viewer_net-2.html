@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Plane Window with Clock and Sound</title>
+  <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@100&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      background: #ffffff;
+      height: 100vh;
+      font-family: 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #clock {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      width: 70px;
+      height: 70px;
+      border: 1.5px solid #aaa;
+      border-radius: 50%;
+      z-index: 10;
+    }
+
+    .hand {
+      position: absolute;
+      width: 50%;
+      height: 1px;
+      background: #444;
+      top: 50%;
+      left: 50%;
+      transform-origin: left;
+      transform: rotate(0deg);
+    }
+
+    #hour { height: 2px; width: 30%; background: #000; }
+    #minute { height: 1px; width: 40%; background: #333; }
+    #second { height: 1px; width: 45%; background: #f00; }
+
+    #timer {
+      font-size: 24px;
+      color: #333;
+      font-weight: 100;
+      margin-bottom: 20px;
+    }
+
+    .plane-window {
+      position: relative;
+      width: 300px;
+      height: 450px;
+      background: #e0f7ff;
+      border-radius: 50% / 40%;
+      overflow: hidden;
+    }
+
+    .sky {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to bottom, #87ceeb, #ffffff);
+      z-index: 1;
+    }
+
+    #window-shade {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 20%;
+      background: #eeeeee;
+      border-radius: 50% / 40%;
+      transform-origin: top;
+      z-index: 2;
+      cursor: grab;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    #window-shade.dragging {
+      cursor: grabbing;
+    }
+
+    #window-shade-handle {
+      width: 30px;
+      height: 2px;
+      background: #aaa;
+      border-radius: 2px;
+      margin-bottom: 8px;
+    }
+
+    #destination {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: white;
+      color: black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: 100;
+      font-family: 'Helvetica Neue', sans-serif;
+      z-index: 9999;
+      display: none;
+    }
+
+    /* iOS-style alert */
+    #ios-alert {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #f8f8f8;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      padding: 20px 20px 0 20px;
+      text-align: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      display: none;
+      width: 260px;
+      z-index: 10000;
+    }
+    #ios-alert .title {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 10px;
+    }
+    #ios-alert .message {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    #ios-alert .button-line {
+      border-top: 1px solid #ccc;
+      padding: 12px 0 10px;
+    }
+    #ios-alert button {
+      font-size: 16px;
+      color: #007aff;
+      background: none;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Analog Clock -->
+  <div id="clock">
+    <div id="hour" class="hand"></div>
+    <div id="minute" class="hand"></div>
+    <div id="second" class="hand"></div>
+  </div>
+
+  <!-- Countdown Timer -->
+  <div id="timer">1:50:00</div>
+
+  <!-- Plane Window -->
+  <div class="plane-window">
+    <div class="sky"></div>
+    <div id="window-shade">
+      <div id="window-shade-handle"></div>
+    </div>
+  </div>
+
+  <!-- Destination Reached Message -->
+  <div id="destination">Destination Reached</div>
+
+  <!-- iOS-style Alert -->
+  <div id="ios-alert">
+    <div class="title">Alert</div>
+    <div class="message">100 is your code enter it in shop.</div>
+    <div class="button-line">
+      <button onclick="document.getElementById('ios-alert').style.display='none'">OK</button>
+    </div>
+  </div>
+
+  <!-- Airplane White Noise -->
+  <audio autoplay loop id="planeSound">
+    <source src="https://cdn.pixabay.com/download/audio/2021/11/25/audio_0e15b18cd7.mp3?filename=airplane-interior-cabin-ambient-sound-111141.mp3" type="audio/mp3">
+    Your browser does not support the audio element.
+  </audio>
+
+  <script>
+    // Shade drag logic
+    const shade = document.getElementById("window-shade");
+    const windowHeight = shade.parentElement.clientHeight;
+    let isDragging = false;
+    let startY, startHeight;
+
+    shade.style.height = windowHeight * 0.2 + "px";
+
+    shade.addEventListener("mousedown", (e) => {
+      isDragging = true;
+      shade.classList.add("dragging");
+      startY = e.clientY;
+      startHeight = parseFloat(getComputedStyle(shade).height);
+    });
+
+    window.addEventListener("mousemove", (e) => {
+      if (!isDragging) return;
+      let dy = e.clientY - startY;
+      let newHeight = Math.min(Math.max(startHeight + dy, windowHeight * 0.2), windowHeight);
+      shade.style.height = newHeight + "px";
+    });
+
+    window.addEventListener("mouseup", () => {
+      isDragging = false;
+      shade.classList.remove("dragging");
+    });
+
+    // Countdown timer
+    const timerEl = document.getElementById("timer");
+    const destinationEl = document.getElementById("destination");
+    let totalSeconds = 1 * 3600 + 50 * 60;
+
+    function showIOSAlert() {
+      const alert = document.getElementById("ios-alert");
+      alert.style.display = "block";
+      setTimeout(() => {
+        alert.style.display = "none";
+      }, 3000);
+    }
+
+    function updateTimer() {
+      if (totalSeconds <= 0) {
+        destinationEl.style.display = "flex";
+        showIOSAlert(); // show code alert
+        return;
+      }
+
+      let hrs = Math.floor(totalSeconds / 3600);
+      let mins = Math.floor((totalSeconds % 3600) / 60);
+      let secs = totalSeconds % 60;
+
+      timerEl.textContent = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      totalSeconds--;
+    }
+
+    setInterval(updateTimer, 1000);
+
+    // Analog clock logic
+    function updateClock() {
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const second = now.getSeconds();
+
+      const hourDeg = (hour % 12) * 30 + minute / 2;
+      const minuteDeg = minute * 6 + second / 10;
+      const secondDeg = second * 6;
+
+      document.getElementById("hour").style.transform = `rotate(${hourDeg}deg)`;
+      document.getElementById("minute").style.transform = `rotate(${minuteDeg}deg)`;
+      document.getElementById("second").style.transform = `rotate(${secondDeg}deg)`;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Set initial volume
+    document.getElementById("planeSound").volume = 0.3;
+  </script>
+</body>
+</html>
