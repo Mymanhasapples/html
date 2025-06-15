@@ -58,7 +58,6 @@
       background: #e0f7ff;
       border-radius: 50% / 40%;
       overflow: hidden;
-      touch-action: none;
     }
 
     .sky {
@@ -71,27 +70,26 @@
 
     #window-shade {
       position: absolute;
-      top: 0;
       left: 0;
       width: 100%;
-      height: 60%;
+      height: 100%;
       background: #eeeeee;
       border-radius: 50% / 40%;
       z-index: 2;
       cursor: grab;
       display: flex;
-      align-items: flex-end;
+      align-items: flex-start;
       justify-content: center;
       touch-action: none;
-      transition: top 0.05s ease-out;
+      top: 0%; /* Initially up */
     }
 
     #window-shade-handle {
       width: 30px;
-      height: 2px;
+      height: 3px;
       background: #aaa;
       border-radius: 2px;
-      margin-bottom: 8px;
+      margin-top: 10px;
     }
 
     #destination {
@@ -144,53 +142,55 @@
     let startY = 0;
     let startTop = 0;
 
-    function startDrag(y) {
-      isDragging = true;
-      startY = y;
-      const computedTop = parseFloat(getComputedStyle(shade).top);
-      startTop = isNaN(computedTop) ? 0 : computedTop;
-    }
-
-    function doDrag(y) {
-      if (!isDragging) return;
-      const deltaY = y - startY;
-      const newTop = Math.max(0, Math.min(startTop + deltaY, planeWindow.clientHeight - 30));
-      shade.style.top = newTop + "px";
-    }
-
-    function stopDrag() {
-      isDragging = false;
+    function setShadeTop(pixels) {
+      const maxTop = planeWindow.clientHeight - 30; // prevent going off bottom
+      const clamped = Math.min(Math.max(0, pixels), maxTop);
+      shade.style.top = clamped + "px";
     }
 
     // Mouse events
     shade.addEventListener("mousedown", (e) => {
-      startDrag(e.clientY);
+      isDragging = true;
+      startY = e.clientY;
+      startTop = parseFloat(getComputedStyle(shade).top);
     });
+
     window.addEventListener("mousemove", (e) => {
-      doDrag(e.clientY);
+      if (!isDragging) return;
+      const deltaY = e.clientY - startY;
+      setShadeTop(startTop + deltaY);
     });
-    window.addEventListener("mouseup", stopDrag);
+
+    window.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
 
     // Touch events
     shade.addEventListener("touchstart", (e) => {
       if (e.touches.length !== 1) return;
-      startDrag(e.touches[0].clientY);
+      isDragging = true;
+      startY = e.touches[0].clientY;
+      startTop = parseFloat(getComputedStyle(shade).top);
     }, { passive: false });
 
     window.addEventListener("touchmove", (e) => {
       if (!isDragging || e.touches.length !== 1) return;
       e.preventDefault();
-      doDrag(e.touches[0].clientY);
+      const deltaY = e.touches[0].clientY - startY;
+      setShadeTop(startTop + deltaY);
     }, { passive: false });
 
-    window.addEventListener("touchend", stopDrag);
+    window.addEventListener("touchend", () => {
+      isDragging = false;
+    });
 
-    // Clock update
+    // Clock
     function updateClock() {
       const now = new Date();
       const hour = now.getHours();
       const minute = now.getMinutes();
       const second = now.getSeconds();
+
       document.getElementById("hour").style.transform = `rotate(${(hour % 12) * 30 + minute / 2}deg)`;
       document.getElementById("minute").style.transform = `rotate(${minute * 6 + second / 10}deg)`;
       document.getElementById("second").style.transform = `rotate(${second * 6}deg)`;
@@ -199,7 +199,7 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Timer logic
+    // Timer
     const timerEl = document.getElementById("timer");
     const destinationEl = document.getElementById("destination");
     let totalSeconds = 1 * 3600 + 50 * 60;
