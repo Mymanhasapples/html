@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Plane Window </title>
+  <title>Plane Window</title>
   <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@100&display=swap" rel="stylesheet">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
@@ -83,6 +83,7 @@
       align-items: flex-end;
       justify-content: center;
       transition: background 0.2s;
+      touch-action: none;
     }
 
     #window-shade.dragging {
@@ -115,7 +116,6 @@
       display: none;
     }
 
-    /* iOS-style alert */
     #ios-alert {
       position: fixed;
       top: 50%;
@@ -157,17 +157,14 @@
 </head>
 <body>
 
-  <!-- Analog Clock -->
   <div id="clock">
     <div id="hour" class="hand"></div>
     <div id="minute" class="hand"></div>
     <div id="second" class="hand"></div>
   </div>
 
-  <!-- Countdown Timer -->
   <div id="timer">1:50:00</div>
 
-  <!-- Plane Window -->
   <div class="plane-window">
     <div class="sky"></div>
     <div id="window-shade">
@@ -175,10 +172,8 @@
     </div>
   </div>
 
-  <!-- Destination Reached Message -->
   <div id="destination">Destination Reached</div>
 
-  <!-- iOS-style Alert -->
   <div id="ios-alert">
     <div class="title">Alert</div>
     <div class="message">Enter Code: 105 in the Shop</div>
@@ -187,7 +182,6 @@
     </div>
   </div>
 
-  <!-- Airplane White Noise -->
   <audio autoplay loop id="planeSound">
     <source src="https://cdn.pixabay.com/download/audio/2021/11/25/audio_0e15b18cd7.mp3?filename=airplane-interior-cabin-ambient-sound-111141.mp3" type="audio/mp3">
     Your browser does not support the audio element.
@@ -230,8 +224,11 @@
       if (e.touches.length === 1) startDrag(e.touches[0].clientY);
     });
     window.addEventListener("touchmove", (e) => {
-      if (e.touches.length === 1) doDrag(e.touches[0].clientY);
-    });
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        doDrag(e.touches[0].clientY);
+      }
+    }, { passive: false });
     window.addEventListener("touchend", endDrag);
 
     // Countdown timer
@@ -250,31 +247,27 @@
     function updateTimer() {
       if (totalSeconds <= 0) {
         destinationEl.style.display = "flex";
-        showIOSAlert(); // show code alert
+        showIOSAlert();
         return;
       }
-
       let hrs = Math.floor(totalSeconds / 3600);
       let mins = Math.floor((totalSeconds % 3600) / 60);
       let secs = totalSeconds % 60;
-
       timerEl.textContent = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
       totalSeconds--;
     }
 
     setInterval(updateTimer, 1000);
 
-    // Analog clock logic
+    // Clock update
     function updateClock() {
       const now = new Date();
       const hour = now.getHours();
       const minute = now.getMinutes();
       const second = now.getSeconds();
-
       const hourDeg = (hour % 12) * 30 + minute / 2;
       const minuteDeg = minute * 6 + second / 10;
       const secondDeg = second * 6;
-
       document.getElementById("hour").style.transform = `rotate(${hourDeg}deg)`;
       document.getElementById("minute").style.transform = `rotate(${minuteDeg}deg)`;
       document.getElementById("second").style.transform = `rotate(${secondDeg}deg)`;
@@ -283,7 +276,6 @@
     setInterval(updateClock, 1000);
     updateClock();
 
-    // Set initial volume
     document.getElementById("planeSound").volume = 0.3;
   </script>
 </body>
