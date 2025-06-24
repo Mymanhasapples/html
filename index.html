@@ -1,277 +1,465 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Plane Window with Clock and Sound</title>
-  <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@100&display=swap" rel="stylesheet">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Flight Simulator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:100&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
-      background: #ffffff;
-      height: 100vh;
-      font-family: 'Helvetica Neue', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    #clock {
-      position: fixed;
-      top: 15px;
-      left: 15px;
-      width: 70px;
-      height: 70px;
-      border: 1.5px solid #aaa;
-      border-radius: 50%;
-      z-index: 10;
-    }
-
-    .hand {
-      position: absolute;
-      width: 50%;
-      height: 1px;
-      background: #444;
-      top: 50%;
-      left: 50%;
-      transform-origin: left;
-      transform: rotate(0deg);
-    }
-
-    #hour { height: 2px; width: 30%; background: #000; }
-    #minute { height: 1px; width: 40%; background: #333; }
-    #second { height: 1px; width: 45%; background: #f00; }
-
-    #timer {
-      font-size: 24px;
-      color: #333;
+      font-family: "Helvetica Neue", sans-serif;
       font-weight: 100;
-      margin-bottom: 20px;
-    }
-
-    .plane-window {
-      position: relative;
-      width: 300px;
-      height: 450px;
-      background: #e0f7ff;
-      border-radius: 50% / 40%;
-      overflow: hidden;
+      color: #747474;
+      font-size: 18px;
+      line-height: 24px;
+      transition: opacity ease-in 0.2s;
     }
 
     .sky {
       position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       background: linear-gradient(to bottom, #87ceeb, #ffffff);
+      transition: background 5s ease;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .sky.clouds::after {
+      content: "";
+      position: absolute;
+      top: 20%;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150"><g fill="%23fff"><ellipse cx="50" cy="60" rx="30" ry="20"/><ellipse cx="80" cy="60" rx="25" ry="18"/><ellipse cx="65" cy="50" rx="35" ry="22"/></g></svg>');
+      background-repeat: repeat-x;
+      background-size: 150px auto;
+      opacity: 0.6;
+      animation: cloudMove 60s linear infinite;
       z-index: 1;
     }
 
-    #window-shade {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 20%;
-      background: #eeeeee;
-      border-radius: 50% / 40%;
-      transform-origin: top;
-      z-index: 2;
-      cursor: grab;
-     ("touchmove", elementDrag);
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      transition: background 0.2s;
+    @keyframes cloudMove {
+      from { background-position: 0 0; }
+      to { background-position: 100% 0; }
     }
 
-    #window-shade.dragging {
+    main {
+      opacity: 1;
+      transition: opacity 1s 1s;
+    }
+
+    #window {
+      position: absolute;
+      z-index: -1;
+      top: 25px;
+      left: 25px;
+      right: 25px;
+      bottom: 25px;
+      overflow: hidden;
+    }
+
+    @media screen and (max-width: 640px) {
+      #window {
+        top: 100px;
+        bottom: 100px;
+      }
+    }
+
+    #video-container {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      position: relative;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #window-shade {
+      background: #dfdfe0;
+      position: absolute;
+      left: 0;
+      top: -85%;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+      z-index: 2;
+    }
+
+    #window-shade:active {
       cursor: grabbing;
     }
 
+    #window-mask {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 3;
+    }
+
     #window-shade-handle {
-      width: 30px;
+      background: #999999;
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 40px;
       height: 2px;
-      background: #aaa;
-      border-radius: 2px;
+    }
+
+    #countdown {
+      position: fixed;
+      top: 50px;
+      width: 100%;
+      text-align: center;
+      font-size: 24px;
+      font-weight: 100;
+      color: #444;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    #clock-wrapper {
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      pointer-events: auto;
+      gap: 4px;
+    }
+
+    .clock-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       margin-bottom: 8px;
     }
 
-    #destination {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: white;
-      color: black;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 48px;
-      font-weight: 100;
-      font-family: 'Helvetica Neue', sans-serif;
-      z-index: 9999;
+    .clock-svg {
+      width: 60px;
+      height: 60px;
+      cursor: pointer;
+    }
+
+    .clock-label {
+      font-size: 12px;
+      color: #444;
       display: none;
     }
 
-    /* iOS-style alert */
-    #ios-alert {
+    #clock2 {
+      display: none;
+    }
+
+    #clock1 circle, #clock2 circle {
+      stroke: #444;
+    }
+
+    #clock1 line, #clock2 line {
+      stroke: #444;
+      stroke-linecap: round;
+    }
+
+    #clock1 line#second1, #clock2 line#second2 {
+      stroke: red;
+    }
+
+    #alert {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(15px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ios-alert {
+      width: 270px;
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 14px;
+      text-align: center;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .ios-title {
+      font-size: 17px;
+      padding: 16px 12px 4px;
+      color: #000;
+    }
+
+    .ios-message {
+      font-size: 14px;
+      padding: 4px 16px 16px;
+      color: #333;
+    }
+
+    .ios-buttons {
+      display: flex;
+      border-top: 1px solid #ccc;
+    }
+
+    .ios-btn {
+      flex: 1;
+      padding: 12px 0;
+      background: transparent;
+      border: none;
+      font-size: 17px;
+      color: #007aff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .ios-btn:not(:last-child) {
+      border-right: 1px solid #ccc;
+    }
+
+    .ios-btn:active {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    #turbulence-banner {
+      display: none;
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: #f8f8f8;
-      border-radius: 16px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      padding: 20px 20px 0 20px;
-      text-align: center;
-      font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-      display: none;
-      width: 260px;
-      z-index: 10000;
-    }
-    #ios-alert .title {
+      width: 80%;
+      max-width: 600px;
+      background-color: #f5f5f5;
+      border: 1px solid #999;
+      color: #555;
+      padding: 12px 24px;
       font-size: 18px;
-      font-weight: 500;
-      margin-bottom: 10px;
-    }
-    #ios-alert .message {
-      font-size: 14px;
-      color: #333;
-      margin-bottom: 20px;
-    }
-    #ios-alert .button-line {
-      border-top: 1px solid #ccc;
-      padding: 12px 0 10px;
-    }
-    #ios-alert button {
-      font-size: 16px;
-      color: #007aff;
-      background: none;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
+      font-weight: 100;
+      border-radius: 4px;
+      text-align: center;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
 
-  <!-- Analog Clock -->
-  <div id="clock">
-    <div id="hour" class="hand"></div>
-    <div id="minute" class="hand"></div>
-    <div id="second" class="hand"></div>
-  </div>
+  <div id="countdown">5:45:00</div>
 
-  <!-- Countdown Timer -->
-  <div id="timer">1:50:00</div>
-
-  <!-- Plane Window -->
-  <div class="plane-window">
-    <div class="sky"></div>
-    <div id="window-shade">
-      <div id="window-shade-handle"></div>
+  <div id="clock-wrapper">
+    <div class="clock-group">
+      <svg id="clock1" class="clock-svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="48" stroke-width="2" fill="none" />
+        <line id="hour1" x1="50" y1="50" x2="50" y2="30" stroke-width="3" />
+        <line id="minute1" x1="50" y1="50" x2="50" y2="20" stroke-width="2" />
+        <line id="second1" x1="50" y1="50" x2="50" y2="18" stroke-width="1" />
+      </svg>
+      <div class="clock-label" id="label1">Home</div>
+    </div>
+    <div class="clock-group" id="clock2-group">
+      <svg id="clock2" class="clock-svg" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="48" stroke-width="2" fill="none" />
+        <line id="hour2" x1="50" y1="50" x2="50" y2="30" stroke-width="3" />
+        <line id="minute2" x1="50" y1="50" x2="50" y2="20" stroke-width="2" />
+        <line id="second2" x1="50" y1="50" x2="50" y2="18" stroke-width="1" />
+      </svg>
+      <div class="clock-label" id="label2">Location</div>
     </div>
   </div>
 
-  <!-- Destination Reached Message -->
-  <div id="destination">Destination Reached</div>
+  <main>
+    <div id="window">
+      <div class="sky"></div>
+      <div id="video-container">
+        <video loop autoplay muted playsinline id="video" src="vid.mp4"></video>
+      </div>
+      <div id="window-shade"><div id="window-shade-handle"></div></div>
+      <svg id="window-mask" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" preserveAspectRatio="none">
+        <path fill="white" d="M0,0v512h512V0H0z M256,505C118.5,505,7,393.5,7,256S118.5,7,256,7s249,111.5,249,249S393.5,505,256,505z"/>
+      </svg>
+    </div>
+  </main>
 
-  <!-- iOS-style Alert -->
-  <div id="ios-alert">
-    <div class="title">Alert</div>
-    <div class="message">100 is your code enter it in shop.</div>
-    <div class="button-line">
-      <button onclick="document.getElementById('ios-alert').style.display='none'">OK</button>
+  <div id="alert">
+    <div class="ios-alert">
+      <div class="ios-title">Destination ended</div>
+      <div class="ios-message">You can Exit Now<br><strong>Code: 223</strong></div>
+      <div class="ios-buttons">
+        <button class="ios-btn" onclick="document.getElementById('alert').style.display='none'">Dismiss</button>
+        <button class="ios-btn" onclick="alert('You Can Exit Now')">Cancel</button>
+      </div>
     </div>
   </div>
 
-  <!-- Airplane White Noise -->
-  <audio autoplay loop id="planeSound">
-    <source src="https://cdn.pixabay.com/download/audio/2021/11/25/audio_0e15b18cd7.mp3?filename=airplane-interior-cabin-ambient-sound-111141.mp3" type="audio/mp3">
-    Your browser does not support the audio element.
-  </audio>
+  <div id="turbulence-banner">Turbulence</div>
 
   <script>
-    // Shade drag logic
-    const shade = document.getElementById("window-shade");
-    const windowHeight = shade.parentElement.clientHeight;
-    let isDragging = false;
-    let startY, startHeight;
-
-    shade.style.height = windowHeight * 0.2 + "px";
-
-    shade.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      shade.classList.add("dragging");
-      startY = e.clientY;
-      startHeight = parseFloat(getComputedStyle(shade).height);
-    });
-
-    window.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      let dy = e.clientY - startY;
-      let newHeight = Math.min(Math.max(startHeight + dy, windowHeight * 0.2), windowHeight);
-      shade.style.height = newHeight + "px";
-    });
-
-    window.addEventListener("mouseup", () => {
-      isDragging = false;
-      shade.classList.remove("dragging");
-    });
-
-    // Countdown timer
-    const timerEl = document.getElementById("timer");
-    const destinationEl = document.getElementById("destination");
-    let totalSeconds = 1 * 3600 + 50 * 60;
-
-    function showIOSAlert() {
-      const alert = document.getElementById("ios-alert");
-      alert.style.display = "block";
-      setTimeout(() => {
-        alert.style.display = "none";
-      }, 3000);
-    }
+    let secondsLeft = 20700;
+    const countdown = document.getElementById("countdown");
 
     function updateTimer() {
-      if (totalSeconds <= 0) {
-        destinationEl.style.display = "flex";
-        showIOSAlert(); // show code alert
-        return;
+      const hours = Math.floor(secondsLeft / 3600);
+      const minutes = Math.floor((secondsLeft % 3600) / 60);
+      const seconds = secondsLeft % 60;
+      countdown.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      if (secondsLeft > 0) {
+        secondsLeft--;
+        setTimeout(updateTimer, 1000);
+      } else {
+        document.getElementById("alert").style.display = "flex";
       }
-
-      let hrs = Math.floor(totalSeconds / 3600);
-      let mins = Math.floor((totalSeconds % 3600) / 60);
-      let secs = totalSeconds % 60;
-
-      timerEl.textContent = `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-      totalSeconds--;
     }
 
-    setInterval(updateTimer, 1000);
+    updateTimer();
 
-    // Analog clock logic
-    function updateClock() {
+    function updateClocks() {
       const now = new Date();
-      const hour = now.getHours();
+      const hour = now.getHours() % 12;
       const minute = now.getMinutes();
       const second = now.getSeconds();
+      const hourAngle = (hour + minute / 60) * 30;
+      const minuteAngle = minute * 6;
+      const secondAngle = second * 6;
 
-      const hourDeg = (hour % 12) * 30 + minute / 2;
-      const minuteDeg = minute * 6 + second / 10;
-      const secondDeg = second * 6;
+      document.getElementById("hour1").setAttribute("transform", `rotate(${hourAngle} 50 50)`);
+      document.getElementById("minute1").setAttribute("transform", `rotate(${minuteAngle} 50 50)`);
+      document.getElementById("second1").setAttribute("transform", `rotate(${secondAngle} 50 50)`);
 
-      document.getElementById("hour").style.transform = `rotate(${hourDeg}deg)`;
-      document.getElementById("minute").style.transform = `rotate(${minuteDeg}deg)`;
-      document.getElementById("second").style.transform = `rotate(${secondDeg}deg)`;
+      requestAnimationFrame(updateClocks);
     }
 
-    setInterval(updateClock, 1000);
-    updateClock();
+    updateClocks();
 
-    // Set initial volume
-    document.getElementById("planeSound").volume = 0.3;
+    let locationTime = new Date();
+    locationTime.setHours(10, 0, 0);
+
+    function updateLocationClock() {
+      locationTime.setSeconds(locationTime.getSeconds() + 1);
+      const hour = locationTime.getHours() % 12;
+      const minute = locationTime.getMinutes();
+      const second = locationTime.getSeconds();
+      const hourAngle = (hour + minute / 60) * 30;
+      const minuteAngle = minute * 6;
+      const secondAngle = second * 6;
+
+      document.getElementById("hour2").setAttribute("transform", `rotate(${hourAngle} 50 50)`);
+      document.getElementById("minute2").setAttribute("transform", `rotate(${minuteAngle} 50 50)`);
+      document.getElementById("second2").setAttribute("transform", `rotate(${secondAngle} 50 50)`);
+    }
+
+    setInterval(updateLocationClock, 1000);
+
+    document.getElementById("clock1").addEventListener("click", () => {
+      const clock2 = document.getElementById("clock2");
+      const label1 = document.getElementById("label1");
+      const label2 = document.getElementById("label2");
+
+      const isVisible = clock2.style.display === "block";
+      clock2.style.display = isVisible ? "none" : "block";
+      label1.style.display = isVisible ? "none" : "block";
+      label2.style.display = isVisible ? "none" : "block";
+    });
+
+    function updateSky() {
+      const hour = new Date().getHours();
+      const sky = document.querySelector(".sky");
+      sky.classList.remove("clouds");
+
+      if (hour === 1) {
+        sky.style.background = "linear-gradient(to bottom, #475893, #bca7a2)";
+        sky.classList.add("clouds");
+      } else if (hour === 2) {
+        sky.style.background = "linear-gradient(to bottom, #a8f0d1, #29c1e3)";
+      } else if (hour === 3) {
+        sky.style.background = "linear-gradient(to bottom, #8cccf1, #2393e0)";
+      } else if (hour === 4) {
+        sky.style.background = "linear-gradient(to bottom, #b4dcf5, #55c2ff)";
+      } else {
+        sky.style.background = "linear-gradient(to bottom, #87ceeb, #ffffff)";
+      }
+    }
+
+    updateSky();
+    setInterval(updateSky, 10 * 60 * 1000);
+
+    dragElement(document.getElementById("window-shade"));
+
+    function dragElement(elmnt) {
+      let y1 = 0, y2 = 0;
+      elmnt.addEventListener("touchstart", dragStart);
+      elmnt.addEventListener("mousedown", dragStart);
+
+      function dragStart(e) {
+        e.preventDefault();
+        y2 = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+        document.addEventListener("touchend", dragEnd);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("touchmove", drag);
+        document.addEventListener("mousemove", drag);
+      }
+
+      function drag(e) {
+        e.preventDefault();
+        const clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
+        y1 = y2 - clientY;
+        y2 = clientY;
+        let newTop = ((elmnt.offsetTop - y1) / elmnt.offsetHeight) * 100;
+        newTop = Math.max(-85, Math.min(0, newTop));
+        elmnt.style.top = newTop + "%";
+      }
+
+      function dragEnd() {
+        document.removeEventListener("touchend", dragEnd);
+        document.removeEventListener("mouseup", dragEnd);
+        document.removeEventListener("touchmove", drag);
+        document.removeEventListener("mousemove", drag);
+      }
+    }
+
+    function showTurbulenceBanner() {
+      const banner = document.getElementById("turbulence-banner");
+      banner.style.display = "block";
+      banner.style.opacity = "1";
+      setTimeout(() => {
+        banner.style.opacity = "0";
+        setTimeout(() => {
+          banner.style.display = "none";
+        }, 500);
+      }, 5000);
+    }
+
+    const turbulenceTimes = [];
+    while (turbulenceTimes.length < 2) {
+      const r = Math.floor(Math.random() * 20700);
+      if (!turbulenceTimes.includes(r)) turbulenceTimes.push(r);
+    }
+
+    let turbulenceTick = 0;
+    setInterval(() => {
+      turbulenceTick++;
+      if (turbulenceTimes.includes(turbulenceTick)) {
+        showTurbulenceBanner();
+      }
+    }, 1000);
   </script>
 </body>
 </html>
